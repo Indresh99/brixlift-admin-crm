@@ -81,7 +81,10 @@ jobs:
         run: npm run build
 
       - name: Sync static files to S3
-        run: aws s3 sync dist/ "s3://${{ steps.tf.outputs.bucket }}" --delete
+        run: aws s3 sync ./dist "s3://${{ steps.tf.outputs.bucket }}" --delete
+
+      - name: Verify S3 upload
+        run: aws s3 ls "s3://${{ steps.tf.outputs.bucket }}/index.html"
 
       - name: Invalidate CloudFront cache
         run: |
