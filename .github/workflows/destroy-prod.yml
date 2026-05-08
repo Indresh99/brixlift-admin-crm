@@ -1,0 +1,62 @@
+name: Destroy Prod
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: ap-south-1
+  TF_STATE_REGION: us-east-1
+  TF_STATE_KEY: admin-crm/prod/terraform.tfstate
+  TF_STATE_BUCKET: brixlift-prod-terraform-state-rabbitoy
+  ADMIN_CRM_PROD_S3_BUCKET: brixlift-prod-admin-crm-rabbitoy
+  ADMIN_CRM_PROD_DOMAIN_NAME: admin-crm.brixlift.com
+  HOSTED_ZONE_NAME: brixlift.com
+  ADMIN_CRM_PROD_DOMAIN_NAMES: admin-crm.brixlift.com
+  ADMIN_CRM_PROD_ACM_CERTIFICATE_ARN: ""
+
+jobs:
+  destroy-prod:
+    name: Destroy Admin CRM Prod
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform init
+        run: |
+          terraform -chdir=terraform/prod init \
+            -backend-config="bucket=${TF_STATE_BUCKET}" \
+            -backend-config="key=${TF_STATE_KEY}" \
+            -backend-config="region=${TF_STATE_REGION}" \
+            -backend-config="encrypt=true"
+
+      - name: Empty site bucket
+        continue-on-error: true
+        run: |
+          aws s3 rm "s3://${ADMIN_CRM_PROD_S3_BUCKET}" --recursive || true
+
+      - name: Terraform destroy
+        run: |
+          terraform -chdir=terraform/prod destroy -auto-approve \
+            -var="aws_region=${AWS_REGION}" \
+            -var="site_bucket_name=${ADMIN_CRM_PROD_S3_BUCKET}" \
+            -var="aliases=${ADMIN_CRM_PROD_DOMAIN_NAMES}" \
+            -var="acm_certificate_arn=${ADMIN_CRM_PROD_ACM_CERTIFICATE_ARN}" \
+            -var="hosted_zone_name=${HOSTED_ZONE_NAME}" \
+            -var="domain_name=${ADMIN_CRM_PROD_DOMAIN_NAME}"
