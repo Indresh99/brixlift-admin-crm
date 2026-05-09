@@ -6,6 +6,7 @@ import FilterListRoundedIcon from "@mui/icons-material/FilterListRounded";
 import HowToRegRoundedIcon from "@mui/icons-material/HowToRegRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
@@ -400,13 +401,32 @@ function Leads() {
             title="Lead queue"
             subtitle="Sorted by urgency and expected value"
             action={
-              <Stack direction="row" spacing={1}>
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: {
+                    xs: canAssign ? "1fr 1fr" : "1fr",
+                    sm: "auto auto auto",
+                  },
+                  gap: 1,
+                  width: { xs: "100%", sm: "auto" },
+                  alignItems: "center",
+                }}
+              >
                 {canAssign && (
                   <Button
                     component="label"
                     variant="outlined"
                     startIcon={<UploadFileRoundedIcon />}
-                    sx={{ borderRadius: 2, textTransform: "none" }}
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: "none",
+                      width: { xs: "100%", sm: "auto" },
+                      justifyContent: "center",
+                      minHeight: 40,
+                      px: { xs: 1, sm: 2 },
+                      whiteSpace: "nowrap",
+                    }}
                   >
                     Upload Excel
                     <input
@@ -420,7 +440,15 @@ function Leads() {
                 <Button
                   variant="outlined"
                   startIcon={<FileDownloadRoundedIcon />}
-                  sx={{ borderRadius: 2, textTransform: "none" }}
+                  sx={{
+                    borderRadius: 2,
+                    textTransform: "none",
+                    width: { xs: "100%", sm: "auto" },
+                    justifyContent: "center",
+                    minHeight: 40,
+                    px: { xs: 1, sm: 2 },
+                    whiteSpace: "nowrap",
+                  }}
                   onClick={() => setDownloadDialogOpen(true)}
                 >
                   Download Excel
@@ -429,14 +457,23 @@ function Leads() {
                   <Button
                     variant="contained"
                     startIcon={<AddRoundedIcon />}
-                    sx={{ borderRadius: 2, textTransform: "none" }}
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: "none",
+                      width: { xs: "100%", sm: "auto" },
+                      justifyContent: "center",
+                      gridColumn: { xs: "1 / -1", sm: "auto" },
+                      minHeight: 40,
+                      px: { xs: 1, sm: 2 },
+                      whiteSpace: "nowrap",
+                    }}
                     type="submit"
                     form="lead-create-form"
                   >
                     Add lead
                   </Button>
                 )}
-              </Stack>
+              </Box>
             }
           >
             {canAssign && (

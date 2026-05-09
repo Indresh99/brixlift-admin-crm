@@ -16,13 +16,13 @@ function SectionCard({ title, subtitle, action, children, sx }) {
     >
       {(title || action) && (
         <Stack
-          direction="row"
+          direction={{ xs: "column", sm: "row" }}
           justifyContent="space-between"
-          alignItems="flex-start"
+          alignItems={{ xs: "stretch", sm: "flex-start" }}
           spacing={2}
           sx={{ mb: 2 }}
         >
-          <div>
+          <Stack sx={{ minWidth: 0 }}>
             <Typography variant="h6" sx={{ fontWeight: 800 }}>
               {title}
             </Typography>
@@ -31,7 +31,7 @@ function SectionCard({ title, subtitle, action, children, sx }) {
                 {subtitle}
               </Typography>
             ) : null}
-          </div>
+          </Stack>
           {action}
         </Stack>
       )}
