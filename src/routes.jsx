@@ -5,7 +5,9 @@ import InsertChartRoundedIcon from "@mui/icons-material/InsertChartRounded";
 import PersonSearchRoundedIcon from "@mui/icons-material/PersonSearchRounded";
 import SupervisorAccountRoundedIcon from "@mui/icons-material/SupervisorAccountRounded";
 import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
+import WorkRoundedIcon from "@mui/icons-material/WorkRounded";
 import Activities from "./pages/Activities";
+import Careers from "./pages/Careers";
 import Customer from "./pages/Customer";
 import DashBoard from "./pages/DashBoard";
 import Leads from "./pages/Leads";
@@ -65,6 +67,13 @@ export const appRoutes = [
     icon: <HistoryRoundedIcon fontSize="small" />,
     element: <Activities />,
     roles: ["OWNER", "MANAGER", "SALES"],
+  },
+  {
+    label: "Careers",
+    path: "/careers",
+    icon: <WorkRoundedIcon fontSize="small" />,
+    element: <Careers />,
+    roles: ["OWNER", "MANAGER"],
   },
   {
     label: "Team",
