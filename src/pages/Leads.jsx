@@ -1,7 +1,11 @@
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
+import EditRoundedIcon from "@mui/icons-material/EditRounded";
+import FileDownloadRoundedIcon from "@mui/icons-material/FileDownloadRounded";
 import FilterListRoundedIcon from "@mui/icons-material/FilterListRounded";
 import HowToRegRoundedIcon from "@mui/icons-material/HowToRegRounded";
+import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
+import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
@@ -9,10 +13,12 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import Grid from "@mui/material/Grid";
+import LinearProgress from "@mui/material/LinearProgress";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
-import { useState } from "react";
+import Typography from "@mui/material/Typography";
+import { useEffect, useState } from "react";
 import { useAuth } from "../auth/useAuth";
 import DataTable from "../components/DataTable";
 import PageHeader from "../components/PageHeader";
@@ -24,23 +30,120 @@ import { formatDateTime } from "../utils/formatDateTime";
 import { formatIndianMoney, parseIndianMoney } from "../utils/money";
 import { moneyToNumber, monthChange } from "../utils/statChange";
 
+const OTHER_LOCATION_VALUE = "__other_location__";
+const LEAD_STATUSES = ["New", "Warm", "Hot", "Qualified", "Visited", "Booked"];
+
 function Leads() {
   const { user } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
   const [leadToConvert, setLeadToConvert] = useState(null);
   const [leadToDelete, setLeadToDelete] = useState(null);
+  const [leadToUpdate, setLeadToUpdate] = useState(null);
+  const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
   const [deleteRemark, setDeleteRemark] = useState("");
+  const [newLocationOpen, setNewLocationOpen] = useState(false);
+  const [updateLocationOpen, setUpdateLocationOpen] = useState(false);
+  const [leadPage, setLeadPage] = useState({
+    content: [],
+    page: 0,
+    size: 25,
+    totalElements: 0,
+    totalPages: 0,
+  });
+  const [leadPageRequest, setLeadPageRequest] = useState({ page: 0, size: 25 });
+  const [leadsLoading, setLeadsLoading] = useState(true);
+  const [uploadState, setUploadState] = useState({
+    active: false,
+    progress: 0,
+    message: "",
+  });
+  const [excelFilters, setExcelFilters] = useState({
+    fromDate: "",
+    toDate: "",
+    location: "",
+    projectName: "",
+    source: "",
+    status: "",
+    owner: "",
+    active: "",
+  });
   const [form, setForm] = useState({
     name: "",
     email: "",
     contact: "",
+    location: "",
     enqueryType: "",
     source: "Website",
     value: "",
+    remarks: "",
     assignedUserId: "",
   });
-  const leadRows = useCrmResource(crmApi.getLeads, [], refreshKey);
+  const [updateForm, setUpdateForm] = useState({
+    name: "",
+    email: "",
+    contact: "",
+    projectName: "",
+    location: "",
+    enqueryType: "",
+    source: "Website",
+    value: "",
+    status: "New",
+    remarks: "",
+    message: "",
+    notes: "",
+    assignedUserId: "",
+  });
+  useEffect(() => {
+    let active = true;
+
+    crmApi
+      .getLeads(leadPageRequest)
+      .then((payload) => {
+        if (!active) return;
+        setLeadPage({
+          content: payload.content || [],
+          page: payload.page || 0,
+          size: payload.size || leadPageRequest.size,
+          totalElements: payload.totalElements || 0,
+          totalPages: payload.totalPages || 0,
+        });
+      })
+      .catch(() => {
+        if (active) {
+          setLeadPage((current) => current);
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setLeadsLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [leadPageRequest, refreshKey]);
+
+  const leadRows = leadPage.content;
   const users = useCrmResource(crmApi.getAssignableUsers, []);
+  const filterOptions = useCrmResource(crmApi.getLeadFilters, {
+    statuses: [],
+    sources: [],
+    locations: [],
+    projects: [],
+    owners: [],
+  }, refreshKey);
+  const leadFilterOptions = {
+    statuses: filterOptions.statuses || [],
+    sources: filterOptions.sources || [],
+    locations: filterOptions.locations || [],
+    projects: filterOptions.projects || [],
+    owners: filterOptions.owners || [],
+  };
+  const locationOptions = leadFilterOptions.locations.map((location) => ({
+    value: location,
+    label: location,
+  }));
   const hotLeads = leadRows.filter((lead) => lead.status === "Hot").length;
   const averageDealSize = leadRows.length
     ? leadRows.reduce((total, lead) => total + moneyToNumber(lead.value), 0) /
@@ -53,41 +156,12 @@ function Leads() {
   }));
   const columns = [
     { key: "name", label: "Lead" },
-    { key: "owner", label: "Owner" },
-    ...(canAssign
-      ? [
-          {
-            key: "assignedUserId",
-            label: "Salesperson",
-            editable: true,
-            options: salesOptions,
-          },
-        ]
-      : []),
-    canAssign
-      ? {
-          key: "source",
-          label: "Source",
-          editable: true,
-          options: [
-            "Website",
-            "Referral",
-            "Campaign",
-            "LinkedIn",
-            "Walk-in",
-            "99Acres",
-            "MagicBricks",
-            "Instagram",
-            "Other",
-          ],
-        }
-      : { key: "source", label: "Source" },
-    { key: "value", label: "Value", editable: true, inputMode: "decimal" },
+    { key: "contact", label: "Phone" },
+    { key: "location", label: "Location" },
+    { key: "source", label: "Source" },
     {
       key: "status",
       label: "Status",
-      editable: true,
-      options: ["New", "Warm", "Hot", "Qualified"],
     },
     {
       key: "createdAt",
@@ -100,18 +174,74 @@ function Leads() {
       render: (value) => formatDateTime(value, "Not converted"),
     },
   ];
-  const updateLead = (id, row) =>
-    crmApi.updateLead(id, {
-      assignedUserId: row.assignedUserId || null,
-      source: row.source,
-      status: row.status,
-      value: parseIndianMoney(row.value),
-    });
   const updateField = (event) => {
     setForm((current) => ({
       ...current,
       [event.target.name]: event.target.value,
     }));
+  };
+  const updateLocationSelection = (event) => {
+    if (event.target.value === OTHER_LOCATION_VALUE) {
+      setNewLocationOpen(true);
+      setForm((current) => ({ ...current, location: "" }));
+      return;
+    }
+    setNewLocationOpen(false);
+    setForm((current) => ({ ...current, location: event.target.value }));
+  };
+  const updateUpdateFormField = (event) => {
+    setUpdateForm((current) => ({
+      ...current,
+      [event.target.name]: event.target.value,
+    }));
+  };
+  const updateDialogLocationSelection = (event) => {
+    if (event.target.value === OTHER_LOCATION_VALUE) {
+      setUpdateLocationOpen(true);
+      setUpdateForm((current) => ({ ...current, location: "" }));
+      return;
+    }
+    setUpdateLocationOpen(false);
+    setUpdateForm((current) => ({ ...current, location: event.target.value }));
+  };
+  const openUpdateDialog = (lead) => {
+    const knownLocation = locationOptions.some(
+      (option) => option.value === lead.location,
+    );
+    setLeadToUpdate(lead);
+    setUpdateLocationOpen(Boolean(lead.location) && !knownLocation);
+    setUpdateForm({
+      name: lead.name || "",
+      email: lead.email || "",
+      contact: lead.contact || "",
+      projectName: lead.projectName || "",
+      location: lead.location || "",
+      enqueryType: lead.enqueryType || "",
+      source: lead.source || "Website",
+      value: lead.value || "",
+      status: lead.status || "New",
+      remarks: lead.remarks || "",
+      message: lead.message || "",
+      notes: lead.notes || "",
+      assignedUserId: lead.assignedUserId || "",
+    });
+  };
+  const closeUpdateDialog = () => {
+    setLeadToUpdate(null);
+    setUpdateLocationOpen(false);
+  };
+  const saveLeadUpdate = async () => {
+    if (!leadToUpdate) return;
+    await crmApi.updateLead(leadToUpdate.id, {
+      ...updateForm,
+      assignedUserId: updateForm.assignedUserId
+        ? Number(updateForm.assignedUserId)
+        : null,
+      value: parseIndianMoney(updateForm.value),
+    });
+    closeUpdateDialog();
+    setLeadsLoading(true);
+    setRefreshKey((current) => current + 1);
   };
   const createLead = async (event) => {
     event.preventDefault();
@@ -125,17 +255,69 @@ function Leads() {
       name: "",
       email: "",
       contact: "",
+      location: "",
       enqueryType: "",
       source: "Website",
       value: "",
+      remarks: "",
       assignedUserId: "",
     });
+    setNewLocationOpen(false);
+    setLeadsLoading(true);
+    setLeadPageRequest((current) => ({ ...current, page: 0 }));
     setRefreshKey((current) => current + 1);
+  };
+  const updateExcelFilter = (event) => {
+    setExcelFilters((current) => ({
+      ...current,
+      [event.target.name]: event.target.value,
+    }));
+  };
+  const uploadExcel = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setUploadState({ active: true, progress: 0, message: "Uploading Excel..." });
+    try {
+      const result = await crmApi.uploadLeadsExcel(file, (progress) => {
+        setUploadState({
+          active: true,
+          progress,
+          message:
+            progress >= 100
+              ? "Processing Excel and checking duplicates..."
+              : `Uploading Excel... ${progress}%`,
+        });
+      });
+      setUploadState({
+        active: false,
+        progress: 100,
+        message: `${result?.imported || 0} leads imported successfully. ${result?.skippedDuplicates || 0} duplicates skipped.`,
+      });
+      setLeadsLoading(true);
+      setLeadPageRequest((current) => ({ ...current, page: 0 }));
+      setRefreshKey((current) => current + 1);
+    } catch {
+      setUploadState({ active: false, progress: 0, message: "" });
+    }
+  };
+  const downloadExcel = async () => {
+    const blob = await crmApi.downloadLeadsExcel(excelFilters);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "enquiries.xlsx";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setDownloadDialogOpen(false);
   };
   const convertLead = async () => {
     if (!leadToConvert) return;
     await crmApi.convertLeadToCustomer(leadToConvert.id);
     setLeadToConvert(null);
+    setLeadsLoading(true);
     setRefreshKey((current) => current + 1);
   };
   const deleteLead = async () => {
@@ -143,26 +325,34 @@ function Leads() {
     await crmApi.deleteLead(leadToDelete.id, { remark: deleteRemark.trim() });
     setLeadToDelete(null);
     setDeleteRemark("");
+    setLeadsLoading(true);
     setRefreshKey((current) => current + 1);
   };
-  const rowActions = canAssign
-    ? [
-        {
-          label: "Delete lead",
-          icon: <DeleteRoundedIcon fontSize="small" />,
-          onClick: (row) => {
-            setLeadToDelete(row);
-            setDeleteRemark("");
+  const rowActions = [
+    {
+      label: "Update lead",
+      icon: <EditRoundedIcon fontSize="small" />,
+      onClick: openUpdateDialog,
+    },
+    ...(canAssign
+      ? [
+          {
+            label: "Delete lead",
+            icon: <DeleteRoundedIcon fontSize="small" />,
+            onClick: (row) => {
+              setLeadToDelete(row);
+              setDeleteRemark("");
+            },
           },
-        },
-        {
-          label: "Convert to customer",
-          icon: <HowToRegRoundedIcon fontSize="small" />,
-          onClick: setLeadToConvert,
-          disabled: (row) => !["Hot", "Qualified"].includes(row.status),
-        },
-      ]
-    : [];
+          {
+            label: "Convert to customer",
+            icon: <HowToRegRoundedIcon fontSize="small" />,
+            onClick: setLeadToConvert,
+            disabled: (row) => !["Hot", "Qualified"].includes(row.status),
+          },
+        ]
+      : []),
+  ];
 
   return (
     <>
@@ -177,8 +367,8 @@ function Leads() {
       <Grid container spacing={2.5}>
         <Grid size={{ xs: 12, md: 4 }}>
           <StatCard
-            title="New this week"
-            value={String(leadRows.length)}
+            title="Total active leads"
+            value={String(leadPage.totalElements)}
             change={monthChange(leadRows)}
             icon={<AddRoundedIcon />}
           />
@@ -211,12 +401,29 @@ function Leads() {
             subtitle="Sorted by urgency and expected value"
             action={
               <Stack direction="row" spacing={1}>
+                {canAssign && (
+                  <Button
+                    component="label"
+                    variant="outlined"
+                    startIcon={<UploadFileRoundedIcon />}
+                    sx={{ borderRadius: 2, textTransform: "none" }}
+                  >
+                    Upload Excel
+                    <input
+                      hidden
+                      type="file"
+                      accept=".xlsx,.xls"
+                      onChange={uploadExcel}
+                    />
+                  </Button>
+                )}
                 <Button
                   variant="outlined"
-                  startIcon={<FilterListRoundedIcon />}
+                  startIcon={<FileDownloadRoundedIcon />}
                   sx={{ borderRadius: 2, textTransform: "none" }}
+                  onClick={() => setDownloadDialogOpen(true)}
                 >
-                  Filter
+                  Download Excel
                 </Button>
                 {canAssign && (
                   <Button
@@ -258,6 +465,32 @@ function Leads() {
                   size="small"
                 />
                 <TextField
+                  select
+                  label="Location"
+                  value={newLocationOpen ? OTHER_LOCATION_VALUE : form.location}
+                  onChange={updateLocationSelection}
+                  size="small"
+                  sx={{ minWidth: 170 }}
+                >
+                  <MenuItem value="">Select location</MenuItem>
+                  {locationOptions.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                  <MenuItem value={OTHER_LOCATION_VALUE}>Other</MenuItem>
+                </TextField>
+                {newLocationOpen && (
+                  <TextField
+                    label="New location"
+                    name="location"
+                    value={form.location}
+                    onChange={updateField}
+                    required
+                    size="small"
+                  />
+                )}
+                <TextField
                   label="Email"
                   name="email"
                   value={form.email}
@@ -268,6 +501,13 @@ function Leads() {
                   label="Requirement"
                   name="enqueryType"
                   value={form.enqueryType}
+                  onChange={updateField}
+                  size="small"
+                />
+                <TextField
+                  label="Remarks"
+                  name="remarks"
+                  value={form.remarks}
                   onChange={updateField}
                   size="small"
                 />
@@ -297,15 +537,403 @@ function Leads() {
                 </TextField>
               </Stack>
             )}
+            {uploadState.message && (
+              <Alert severity={uploadState.active ? "info" : "success"} sx={{ mb: 2 }}>
+                <Stack spacing={1}>
+                  <Typography variant="body2">{uploadState.message}</Typography>
+                  {uploadState.active && (
+                    <LinearProgress variant="determinate" value={uploadState.progress} />
+                  )}
+                </Stack>
+              </Alert>
+            )}
+            {leadsLoading && <LinearProgress sx={{ mb: 2 }} />}
             <DataTable
               columns={columns}
               rows={leadRows}
-              onRowUpdate={updateLead}
               rowActions={rowActions}
+              pagination={{
+                count: leadPage.totalElements,
+                page: leadPage.page,
+                rowsPerPage: leadPage.size,
+                onPageChange: (_event, page) => {
+                  setLeadsLoading(true);
+                  setLeadPageRequest((current) => ({ ...current, page }));
+                },
+                onRowsPerPageChange: (event) => {
+                  setLeadsLoading(true);
+                  setLeadPageRequest({
+                    page: 0,
+                    size: Number(event.target.value),
+                  });
+                },
+              }}
             />
           </SectionCard>
         </Grid>
       </Grid>
+
+      <Dialog
+        open={downloadDialogOpen}
+        onClose={() => setDownloadDialogOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Download enquiries</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ pt: 1 }}>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                label="From date"
+                name="fromDate"
+                type="date"
+                value={excelFilters.fromDate}
+                onChange={updateExcelFilter}
+                fullWidth
+                size="small"
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                label="To date"
+                name="toDate"
+                type="date"
+                value={excelFilters.toDate}
+                onChange={updateExcelFilter}
+                fullWidth
+                size="small"
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                select
+                label="Location"
+                name="location"
+                value={excelFilters.location}
+                onChange={updateExcelFilter}
+                fullWidth
+                size="small"
+              >
+                <MenuItem value="">All locations</MenuItem>
+                {leadFilterOptions.locations.map((location) => (
+                  <MenuItem key={location} value={location}>
+                    {location}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                select
+                label="Project"
+                name="projectName"
+                value={excelFilters.projectName}
+                onChange={updateExcelFilter}
+                fullWidth
+                size="small"
+              >
+                <MenuItem value="">All projects</MenuItem>
+                {leadFilterOptions.projects.map((project) => (
+                  <MenuItem key={project} value={project}>
+                    {project}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                select
+                label="Source"
+                name="source"
+                value={excelFilters.source}
+                onChange={updateExcelFilter}
+                fullWidth
+                size="small"
+              >
+                <MenuItem value="">All sources</MenuItem>
+                {leadFilterOptions.sources.map((source) => (
+                  <MenuItem key={source} value={source}>
+                    {source}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                select
+                label="Status"
+                name="status"
+                value={excelFilters.status}
+                onChange={updateExcelFilter}
+                fullWidth
+                size="small"
+              >
+                <MenuItem value="">All statuses</MenuItem>
+                {leadFilterOptions.statuses.map((status) => (
+                  <MenuItem key={status} value={status}>
+                    {status}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                select
+                label="Owner"
+                name="owner"
+                value={excelFilters.owner}
+                onChange={updateExcelFilter}
+                fullWidth
+                size="small"
+              >
+                <MenuItem value="">All owners</MenuItem>
+                {leadFilterOptions.owners.map((owner) => (
+                  <MenuItem key={owner} value={owner}>
+                    {owner}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                select
+                label="Lead state"
+                name="active"
+                value={excelFilters.active}
+                onChange={updateExcelFilter}
+                fullWidth
+                size="small"
+              >
+                <MenuItem value="">All leads</MenuItem>
+                <MenuItem value="true">Active only</MenuItem>
+                <MenuItem value="false">Inactive only</MenuItem>
+              </TextField>
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDownloadDialogOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={downloadExcel}>
+            Download
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(leadToUpdate)}
+        onClose={closeUpdateDialog}
+        fullWidth
+        maxWidth="md"
+      >
+        <DialogTitle>Update lead</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ pt: 1 }}>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                label="Name"
+                name="name"
+                value={updateForm.name}
+                onChange={updateUpdateFormField}
+                fullWidth
+                size="small"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                label="Phone"
+                name="contact"
+                value={updateForm.contact}
+                onChange={updateUpdateFormField}
+                fullWidth
+                size="small"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                label="Email"
+                name="email"
+                value={updateForm.email}
+                onChange={updateUpdateFormField}
+                fullWidth
+                size="small"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                label="Project"
+                name="projectName"
+                value={updateForm.projectName}
+                onChange={updateUpdateFormField}
+                fullWidth
+                size="small"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                select
+                label="Location"
+                value={
+                  updateLocationOpen
+                    ? OTHER_LOCATION_VALUE
+                    : updateForm.location
+                }
+                onChange={updateDialogLocationSelection}
+                fullWidth
+                size="small"
+              >
+                <MenuItem value="">Select location</MenuItem>
+                {locationOptions.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+                <MenuItem value={OTHER_LOCATION_VALUE}>Other</MenuItem>
+              </TextField>
+            </Grid>
+            {updateLocationOpen && (
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  label="New location"
+                  name="location"
+                  value={updateForm.location}
+                  onChange={updateUpdateFormField}
+                  fullWidth
+                  required
+                  size="small"
+                />
+              </Grid>
+            )}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                label="Requirement"
+                name="enqueryType"
+                value={updateForm.enqueryType}
+                onChange={updateUpdateFormField}
+                fullWidth
+                size="small"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                select
+                label="Source"
+                name="source"
+                value={updateForm.source}
+                onChange={updateUpdateFormField}
+                fullWidth
+                size="small"
+              >
+                {[
+                  "Website",
+                  "Referral",
+                  "Campaign",
+                  "LinkedIn",
+                  "Walk-in",
+                  "99Acres",
+                  "MagicBricks",
+                  "Instagram",
+                  "Other",
+                ].map((source) => (
+                  <MenuItem key={source} value={source}>
+                    {source}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                select
+                label="Status"
+                name="status"
+                value={updateForm.status}
+                onChange={updateUpdateFormField}
+                fullWidth
+                size="small"
+              >
+                {LEAD_STATUSES.map((status) => (
+                  <MenuItem key={status} value={status}>
+                    {status}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                label="Value"
+                name="value"
+                value={updateForm.value}
+                onChange={updateUpdateFormField}
+                fullWidth
+                size="small"
+              />
+            </Grid>
+            {canAssign && (
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  select
+                  label="Salesperson"
+                  name="assignedUserId"
+                  value={updateForm.assignedUserId}
+                  onChange={updateUpdateFormField}
+                  fullWidth
+                  size="small"
+                >
+                  <MenuItem value="">Unassigned</MenuItem>
+                  {salesOptions.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+            )}
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                label="Remarks"
+                name="remarks"
+                value={updateForm.remarks}
+                onChange={updateUpdateFormField}
+                fullWidth
+                multiline
+                minRows={3}
+                size="small"
+              />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                label="Message"
+                name="message"
+                value={updateForm.message}
+                onChange={updateUpdateFormField}
+                fullWidth
+                multiline
+                minRows={2}
+                size="small"
+              />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                label="Notes"
+                name="notes"
+                value={updateForm.notes}
+                onChange={updateUpdateFormField}
+                fullWidth
+                multiline
+                minRows={2}
+                size="small"
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeUpdateDialog}>Cancel</Button>
+          <Button variant="contained" onClick={saveLeadUpdate}>
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog
         open={Boolean(leadToConvert)}
