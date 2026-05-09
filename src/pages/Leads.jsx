@@ -25,7 +25,7 @@ import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/useAuth";
 import DataTable from "../components/DataTable";
@@ -80,7 +80,6 @@ function Leads() {
   const [leadPageRequest, setLeadPageRequest] = useState({
     page: 0,
     size: 10,
-    leadId: focusedLeadId || undefined,
   });
   const [leadSearch, setLeadSearch] = useState("");
   const [leadsLoading, setLeadsLoading] = useState(true);
@@ -125,17 +124,25 @@ function Leads() {
     notes: "",
     assignedUserId: "",
   });
+  const effectiveLeadPageRequest = useMemo(
+    () =>
+      focusedLeadId
+        ? { ...leadPageRequest, page: 0, leadId: focusedLeadId, q: "" }
+        : leadPageRequest,
+    [focusedLeadId, leadPageRequest],
+  );
+
   useEffect(() => {
     let active = true;
 
     crmApi
-      .getLeads(leadPageRequest)
+      .getLeads(effectiveLeadPageRequest)
       .then((payload) => {
         if (!active) return;
         setLeadPage({
           content: payload.content || [],
           page: payload.page || 0,
-          size: payload.size || leadPageRequest.size,
+          size: payload.size || effectiveLeadPageRequest.size,
           totalElements: payload.totalElements || 0,
           totalPages: payload.totalPages || 0,
         });
@@ -154,25 +161,7 @@ function Leads() {
     return () => {
       active = false;
     };
-  }, [leadPageRequest, refreshKey]);
-
-  useEffect(() => {
-    setLeadPageRequest((current) => {
-      if ((current.leadId || "") === focusedLeadId) {
-        return current;
-      }
-      setLeadsLoading(true);
-      return {
-        ...current,
-        page: 0,
-        leadId: focusedLeadId || undefined,
-        q: focusedLeadId ? "" : current.q,
-      };
-    });
-    if (focusedLeadId) {
-      setLeadSearch("");
-    }
-  }, [focusedLeadId]);
+  }, [effectiveLeadPageRequest, refreshKey]);
 
   useEffect(() => {
     const timeout = setTimeout(() => {

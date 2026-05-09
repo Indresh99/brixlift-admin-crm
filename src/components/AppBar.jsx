@@ -60,7 +60,6 @@ function AppBarBrix() {
 
   const loadNotifications = React.useCallback(async () => {
     if (!user?.id) return;
-    setNotificationsLoading(true);
     try {
       const payload = await crmApi.getNotifications();
       setNotifications(Array.isArray(payload) ? payload : []);
@@ -70,8 +69,28 @@ function AppBarBrix() {
   }, [user?.id]);
 
   React.useEffect(() => {
-    loadNotifications();
-  }, [loadNotifications]);
+    let active = true;
+    if (!user?.id) return undefined;
+
+    const loadInitialNotifications = async () => {
+      setNotificationsLoading(true);
+      try {
+        const payload = await crmApi.getNotifications();
+        if (active) {
+          setNotifications(Array.isArray(payload) ? payload : []);
+        }
+      } finally {
+        if (active) {
+          setNotificationsLoading(false);
+        }
+      }
+    };
+
+    loadInitialNotifications();
+    return () => {
+      active = false;
+    };
+  }, [user?.id]);
 
   const openMobileMenu = (event) => {
     setMobileAnchorEl(event.currentTarget);
@@ -91,6 +110,7 @@ function AppBarBrix() {
 
   const openNotificationMenu = (event) => {
     setNotificationAnchorEl(event.currentTarget);
+    setNotificationsLoading(true);
     loadNotifications();
   };
 
