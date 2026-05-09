@@ -1,7 +1,7 @@
 import { emitToast } from "../toast/toastEvents";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+  import.meta.env.VITE_API_BASE_URL || "https://api.brixlift.com";
 const API_ROOT = `${API_BASE_URL}/api`;
 
 export const authStorage = {
