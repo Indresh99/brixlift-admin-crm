@@ -3,7 +3,7 @@ import Button from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 
-function PageHeader({ title, eyebrow, description, actionLabel, actionIcon }) {
+function PageHeader({ title, eyebrow, description, actionLabel, actionIcon, onAction }) {
   return (
     <Stack
       direction={{ xs: "column", md: "row" }}
@@ -34,6 +34,7 @@ function PageHeader({ title, eyebrow, description, actionLabel, actionIcon }) {
         <Button
           variant="contained"
           startIcon={actionIcon}
+          onClick={onAction}
           sx={{ borderRadius: 2, boxShadow: "none", textTransform: "none" }}
         >
           {actionLabel}
