@@ -1,10 +1,14 @@
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import ClearRoundedIcon from "@mui/icons-material/ClearRounded";
 import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import FileDownloadRoundedIcon from "@mui/icons-material/FileDownloadRounded";
 import FilterListRoundedIcon from "@mui/icons-material/FilterListRounded";
 import HowToRegRoundedIcon from "@mui/icons-material/HowToRegRounded";
+import LocalPhoneRoundedIcon from "@mui/icons-material/LocalPhoneRounded";
+import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
+import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -14,12 +18,15 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import Grid from "@mui/material/Grid";
+import IconButton from "@mui/material/IconButton";
+import InputAdornment from "@mui/material/InputAdornment";
 import LinearProgress from "@mui/material/LinearProgress";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/useAuth";
 import DataTable from "../components/DataTable";
 import PageHeader from "../components/PageHeader";
@@ -34,8 +41,27 @@ import { moneyToNumber, monthChange } from "../utils/statChange";
 const OTHER_LOCATION_VALUE = "__other_location__";
 const LEAD_STATUSES = ["New", "Warm", "Hot", "Qualified", "Visited", "Booked"];
 
+function phoneDigits(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function whatsappNumber(value) {
+  const digits = phoneDigits(value);
+  if (!digits) return "";
+  if (digits.length === 10) return `91${digits}`;
+  return digits;
+}
+
+function whatsappMessage(lead, salespersonName) {
+  return encodeURIComponent(
+    `Hi ${lead.name || ""}, this is ${salespersonName || "Brixlift"} from Brixlift regarding your property enquiry.`,
+  );
+}
+
 function Leads() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const focusedLeadId = searchParams.get("leadId") || "";
   const [refreshKey, setRefreshKey] = useState(0);
   const [leadToConvert, setLeadToConvert] = useState(null);
   const [leadToDelete, setLeadToDelete] = useState(null);
@@ -47,11 +73,16 @@ function Leads() {
   const [leadPage, setLeadPage] = useState({
     content: [],
     page: 0,
-    size: 25,
+    size: 10,
     totalElements: 0,
     totalPages: 0,
   });
-  const [leadPageRequest, setLeadPageRequest] = useState({ page: 0, size: 25 });
+  const [leadPageRequest, setLeadPageRequest] = useState({
+    page: 0,
+    size: 10,
+    leadId: focusedLeadId || undefined,
+  });
+  const [leadSearch, setLeadSearch] = useState("");
   const [leadsLoading, setLeadsLoading] = useState(true);
   const [uploadState, setUploadState] = useState({
     active: false,
@@ -125,6 +156,39 @@ function Leads() {
     };
   }, [leadPageRequest, refreshKey]);
 
+  useEffect(() => {
+    setLeadPageRequest((current) => {
+      if ((current.leadId || "") === focusedLeadId) {
+        return current;
+      }
+      setLeadsLoading(true);
+      return {
+        ...current,
+        page: 0,
+        leadId: focusedLeadId || undefined,
+        q: focusedLeadId ? "" : current.q,
+      };
+    });
+    if (focusedLeadId) {
+      setLeadSearch("");
+    }
+  }, [focusedLeadId]);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      const query = leadSearch.trim();
+      setLeadPageRequest((current) => {
+        if ((current.q || "") === query && current.page === 0) {
+          return current;
+        }
+        setLeadsLoading(true);
+        return { ...current, page: 0, q: query };
+      });
+    }, 350);
+
+    return () => clearTimeout(timeout);
+  }, [leadSearch]);
+
   const leadRows = leadPage.content;
   const users = useCrmResource(crmApi.getAssignableUsers, []);
   const filterOptions = useCrmResource(crmApi.getLeadFilters, {
@@ -157,7 +221,42 @@ function Leads() {
   }));
   const columns = [
     { key: "name", label: "Lead" },
-    { key: "contact", label: "Phone" },
+    {
+      key: "contact",
+      label: "Phone",
+      minWidth: 180,
+      render: (value, row) => {
+        const digits = phoneDigits(value);
+        const waNumber = whatsappNumber(value);
+        if (!digits) return "-";
+        return (
+          <Stack direction="row" spacing={0.5} alignItems="center">
+            <Typography variant="body2" sx={{ minWidth: 92 }}>
+              {value}
+            </Typography>
+            <IconButton
+              component="a"
+              href={`tel:${digits}`}
+              size="small"
+              aria-label={`Call ${row.name || "lead"}`}
+            >
+              <LocalPhoneRoundedIcon fontSize="small" />
+            </IconButton>
+            <IconButton
+              component="a"
+              href={`https://wa.me/${waNumber}?text=${whatsappMessage(row, user?.name)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              size="small"
+              aria-label={`WhatsApp ${row.name || "lead"}`}
+              sx={{ color: "#128C7E" }}
+            >
+              <WhatsAppIcon fontSize="small" />
+            </IconButton>
+          </Stack>
+        );
+      },
+    },
     { key: "location", label: "Location" },
     { key: "source", label: "Source" },
     {
@@ -476,6 +575,57 @@ function Leads() {
               </Box>
             }
           >
+            <TextField
+              value={leadSearch}
+              onChange={(event) => {
+                if (focusedLeadId) {
+                  setSearchParams({});
+                }
+                setLeadSearch(event.target.value);
+              }}
+              placeholder="Search leads by name, phone, email, location, source, requirement..."
+              fullWidth
+              size="small"
+              sx={{ mb: 2 }}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchRoundedIcon fontSize="small" />
+                    </InputAdornment>
+                  ),
+                  endAdornment: leadSearch ? (
+                    <InputAdornment position="end">
+                      <IconButton
+                        edge="end"
+                        size="small"
+                        aria-label="Clear lead search"
+                        onClick={() => setLeadSearch("")}
+                      >
+                        <ClearRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </InputAdornment>
+                  ) : null,
+                },
+              }}
+            />
+            {focusedLeadId && (
+              <Alert
+                severity="info"
+                sx={{ mb: 2 }}
+                action={
+                  <Button
+                    color="inherit"
+                    size="small"
+                    onClick={() => setSearchParams({})}
+                  >
+                    Show all
+                  </Button>
+                }
+              >
+                Showing the follow-up lead selected from the dashboard.
+              </Alert>
+            )}
             {canAssign && (
               <Stack
                 id="lead-create-form"
@@ -591,8 +741,8 @@ function Leads() {
               rowActions={rowActions}
               pagination={{
                 count: leadPage.totalElements,
-                page: leadPage.page,
-                rowsPerPage: leadPage.size,
+                page: leadPageRequest.page,
+                rowsPerPage: leadPageRequest.size,
                 onPageChange: (_event, page) => {
                   setLeadsLoading(true);
                   setLeadPageRequest((current) => ({ ...current, page }));

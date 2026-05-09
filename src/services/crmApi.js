@@ -1,7 +1,7 @@
 import { emitToast } from "../toast/toastEvents";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "https://api.brixlift.com";
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 const API_ROOT = `${API_BASE_URL}/api`;
 
 export const authStorage = {
@@ -128,7 +128,10 @@ export const crmApi = {
   getDashboardPipeline: () => request("/dashboard/pipeline"),
   getDashboardTasks: () => request("/dashboard/tasks"),
   getActivities: () => request("/activities"),
-  getLeads: () => request("/leads"),
+  getNotifications: () => request("/notifications"),
+  markNotificationRead: (id) => patch(`/notifications/${id}/read`, {}),
+  markAllNotificationsRead: () => patch("/notifications/read-all", {}),
+  getLeads: (params = {}) => request(`/leads${toQueryString(params)}`),
   createLead: (payload) => post("/leads", payload),
   updateLead: (id, payload) => patch(`/leads/${id}`, payload),
   deleteLead: (id, payload) => deleteRequest(`/leads/${id}`, payload),

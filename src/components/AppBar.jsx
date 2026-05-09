@@ -21,10 +21,12 @@ import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import NotificationsNoneRoundedIcon from "@mui/icons-material/NotificationsNoneRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/useAuth";
 import logoRef from "../assets/rect-full-logo.png";
 import { appRoutes } from "../routes";
+import { crmApi } from "../services/crmApi";
+import { formatDateTime } from "../utils/formatDateTime";
 
 const userItems = [
   { label: "My profile", icon: <AccountCircleRoundedIcon fontSize="small" /> },
@@ -32,13 +34,44 @@ const userItems = [
   { label: "Sign out", icon: <LogoutRoundedIcon fontSize="small" /> },
 ];
 
+function notificationTarget(notification) {
+  const type = String(notification.entityType || "").toLowerCase();
+  const id = notification.entityId;
+  if (type === "lead" && id) return `/leads?leadId=${id}`;
+  if (type === "property" && id) return `/properties/${id}`;
+  if (type === "customer") return "/customers";
+  if (type === "user" || type === "team") return "/team";
+  if (type === "activity") return "/activity";
+  return null;
+}
+
 function AppBarBrix() {
   const { logout, user } = useAuth();
+  const navigate = useNavigate();
   const [mobileAnchorEl, setMobileAnchorEl] = React.useState(null);
   const [userAnchorEl, setUserAnchorEl] = React.useState(null);
+  const [notificationAnchorEl, setNotificationAnchorEl] = React.useState(null);
+  const [notifications, setNotifications] = React.useState([]);
+  const [notificationsLoading, setNotificationsLoading] = React.useState(false);
   const visibleRoutes = appRoutes.filter(
     (route) => !route.hidden && (!route.roles || route.roles.includes(user?.role)),
   );
+  const unreadCount = notifications.filter((notification) => !notification.read).length;
+
+  const loadNotifications = React.useCallback(async () => {
+    if (!user?.id) return;
+    setNotificationsLoading(true);
+    try {
+      const payload = await crmApi.getNotifications();
+      setNotifications(Array.isArray(payload) ? payload : []);
+    } finally {
+      setNotificationsLoading(false);
+    }
+  }, [user?.id]);
+
+  React.useEffect(() => {
+    loadNotifications();
+  }, [loadNotifications]);
 
   const openMobileMenu = (event) => {
     setMobileAnchorEl(event.currentTarget);
@@ -54,6 +87,37 @@ function AppBarBrix() {
 
   const closeUserMenu = () => {
     setUserAnchorEl(null);
+  };
+
+  const openNotificationMenu = (event) => {
+    setNotificationAnchorEl(event.currentTarget);
+    loadNotifications();
+  };
+
+  const closeNotificationMenu = () => {
+    setNotificationAnchorEl(null);
+  };
+
+  const openNotification = async (notification) => {
+    let updated = notification;
+    if (!notification.read) {
+      updated = await crmApi.markNotificationRead(notification.id);
+      setNotifications((current) =>
+        current.map((item) => (item.id === updated.id ? updated : item)),
+      );
+    }
+    closeNotificationMenu();
+    const target = notificationTarget(updated);
+    if (target) {
+      navigate(target);
+    }
+  };
+
+  const markAllRead = async () => {
+    await crmApi.markAllNotificationsRead();
+    setNotifications((current) =>
+      current.map((notification) => ({ ...notification, read: true })),
+    );
   };
 
   const initials =
@@ -188,8 +252,18 @@ function AppBarBrix() {
           <IconButton aria-label="Help">
             <HelpOutlineRoundedIcon />
           </IconButton>
-          <IconButton aria-label="Notifications">
-            <Badge color="error" variant="dot" overlap="circular">
+          <IconButton
+            aria-label="Notifications"
+            aria-controls={notificationAnchorEl ? "notifications-menu" : undefined}
+            aria-haspopup="true"
+            onClick={openNotificationMenu}
+          >
+            <Badge
+              color="error"
+              badgeContent={unreadCount}
+              invisible={unreadCount === 0}
+              overlap="circular"
+            >
               <NotificationsNoneRoundedIcon />
             </Badge>
           </IconButton>
@@ -240,6 +314,118 @@ function AppBarBrix() {
           </IconButton>
         </Stack>
       </Toolbar>
+
+      <Menu
+        id="notifications-menu"
+        anchorEl={notificationAnchorEl}
+        open={Boolean(notificationAnchorEl)}
+        onClose={closeNotificationMenu}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+        PaperProps={{
+          sx: {
+            maxWidth: { xs: "calc(100vw - 24px)", sm: 380 },
+            minWidth: { xs: 320, sm: 360 },
+            mt: 1,
+          },
+        }}
+      >
+        <Box sx={{ px: 2, py: 1.5 }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between">
+            <Box>
+              <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                Notifications
+              </Typography>
+              <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                {unreadCount} unread
+              </Typography>
+            </Box>
+            <Button
+              size="small"
+              onClick={markAllRead}
+              disabled={unreadCount === 0}
+              sx={{ textTransform: "none" }}
+            >
+              Mark all read
+            </Button>
+          </Stack>
+        </Box>
+        <Divider />
+        {notificationsLoading && (
+          <Box sx={{ px: 2, py: 2 }}>
+            <Typography variant="body2" sx={{ color: "text.secondary" }}>
+              Loading notifications...
+            </Typography>
+          </Box>
+        )}
+        {!notificationsLoading && notifications.length === 0 && (
+          <Box sx={{ px: 2, py: 3 }}>
+            <Typography variant="body2" sx={{ color: "text.secondary" }}>
+              No notifications yet.
+            </Typography>
+          </Box>
+        )}
+        {!notificationsLoading &&
+          notifications.slice(0, 5).map((notification) => (
+            <MenuItem
+              key={notification.id}
+              onClick={() => openNotification(notification)}
+              sx={{
+                alignItems: "flex-start",
+                bgcolor: notification.read ? "transparent" : "action.hover",
+                gap: 1.25,
+                py: 1.25,
+                whiteSpace: "normal",
+              }}
+            >
+              <Box
+                sx={{
+                  bgcolor: notification.read ? "divider" : "primary.main",
+                  borderRadius: 999,
+                  flex: "0 0 auto",
+                  height: 8,
+                  mt: 0.8,
+                  width: 8,
+                }}
+              />
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="body2" sx={{ fontWeight: 800 }}>
+                  {notification.title || "Notification"}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{ color: "text.secondary", mt: 0.25 }}
+                >
+                  {notification.message || "No details provided."}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{ color: "text.disabled", display: "block", mt: 0.5 }}
+                >
+                  {formatDateTime(notification.createdAt, "")}
+                </Typography>
+              </Box>
+            </MenuItem>
+          ))}
+        {!notificationsLoading && notifications.length > 0 && (
+          <>
+            <Divider />
+            <Box sx={{ p: 1 }}>
+              <Button
+                fullWidth
+                variant="text"
+                onClick={() => {
+                  closeNotificationMenu();
+                  navigate("/notifications");
+                }}
+                sx={{ textTransform: "none" }}
+              >
+                View all notifications
+              </Button>
+            </Box>
+          </>
+        )}
+      </Menu>
 
       <Menu
         anchorEl={mobileAnchorEl}
