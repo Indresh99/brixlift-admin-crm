@@ -1,16 +1,19 @@
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import IconButton from "@mui/material/IconButton";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
+import Stack from "@mui/material/Stack";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
-import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
+import Typography from "@mui/material/Typography";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
 import { useState } from "react";
 
@@ -36,6 +39,12 @@ function DataTable({
 }) {
   const [drafts, setDrafts] = useState({});
   const [savedRows, setSavedRows] = useState({});
+  const page = Number(pagination?.page || 0);
+  const rowsPerPage = Number(pagination?.rowsPerPage || 10);
+  const count = Number(pagination?.count || 0);
+  const totalPages = Math.max(1, Math.ceil(count / rowsPerPage));
+  const fromRow = count === 0 ? 0 : page * rowsPerPage + 1;
+  const toRow = Math.min(count, (page + 1) * rowsPerPage);
 
   const updateDraft = (row, key, value) => {
     setDrafts((current) => ({
@@ -72,14 +81,97 @@ function DataTable({
     });
   };
 
+  const renderPagination = () => {
+    if (!pagination) return null;
+
+    const goToPage = (nextPage) => {
+      pagination.onPageChange?.(
+        null,
+        Math.min(Math.max(nextPage, 0), totalPages - 1),
+      );
+    };
+
+    return (
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        spacing={1.5}
+        alignItems={{ xs: "stretch", sm: "center" }}
+        justifyContent="space-between"
+        sx={{
+          border: "1px solid",
+          borderColor: "divider",
+          borderRadius: 2,
+          bgcolor: "background.paper",
+          px: 1.5,
+          py: 1,
+          my: 1.5,
+        }}
+      >
+        <Typography variant="body2" sx={{ color: "text.secondary" }}>
+          Showing {fromRow}-{toRow} of {count} leads
+        </Typography>
+        <Stack
+          direction="row"
+          spacing={1}
+          alignItems="center"
+          justifyContent={{ xs: "space-between", sm: "flex-end" }}
+          sx={{ flexWrap: "wrap", rowGap: 1 }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Typography variant="body2" sx={{ color: "text.secondary" }}>
+              Rows
+            </Typography>
+            <Select
+              size="small"
+              value={rowsPerPage}
+              onChange={pagination.onRowsPerPageChange}
+              sx={{ minWidth: 78 }}
+            >
+              {[10, 25, 50, 100].map((option) => (
+                <MenuItem key={option} value={option}>
+                  {option}
+                </MenuItem>
+              ))}
+            </Select>
+          </Box>
+          <Typography variant="body2" sx={{ color: "text.secondary" }}>
+            Page {Math.min(page + 1, totalPages)} of {totalPages}
+          </Typography>
+          <Box sx={{ display: "flex", gap: 0.75 }}>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => goToPage(page - 1)}
+              disabled={page <= 0}
+            >
+              Prev
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => goToPage(page + 1)}
+              disabled={page >= totalPages - 1 || count === 0}
+            >
+              Next
+            </Button>
+          </Box>
+        </Stack>
+      </Stack>
+    );
+  };
+
   return (
     <>
+      {/* {renderPagination()} */}
       <TableContainer sx={{ overflowX: "auto" }}>
         <Table size="small">
           <TableHead>
             <TableRow>
               {columns.map((column) => (
-                <TableCell key={column.key} sx={{ color: "text.secondary", fontWeight: 800 }}>
+                <TableCell
+                  key={column.key}
+                  sx={{ color: "text.secondary", fontWeight: 800 }}
+                >
                   {column.label}
                 </TableCell>
               ))}
@@ -103,17 +195,27 @@ function DataTable({
               const row = { ...originalRow, ...savedRows[originalRow.id] };
 
               return (
-                <TableRow key={row.id} hover sx={{ "&:last-child td": { borderBottom: 0 } }}>
+                <TableRow
+                  key={row.id}
+                  hover
+                  sx={{ "&:last-child td": { borderBottom: 0 } }}
+                >
                   {columns.map((column) => {
                     const draft = drafts[row.id] || row;
                     const value = draft[column.key];
                     const renderedValue = column.render?.(value, draft);
                     const options = column.options || [];
                     const otherValue = column.otherValue || "__other__";
-                    const otherSelected = Boolean(draft[`${column.key}OtherSelected`]);
-                    const optionValues = options.map((option) => String(option.value ?? option));
+                    const otherSelected = Boolean(
+                      draft[`${column.key}OtherSelected`],
+                    );
+                    const optionValues = options.map((option) =>
+                      String(option.value ?? option),
+                    );
                     const selectOptions =
-                      value && !otherSelected && !optionValues.includes(String(value))
+                      value &&
+                      !otherSelected &&
+                      !optionValues.includes(String(value))
                         ? [{ value, label: value }, ...options]
                         : options;
 
@@ -125,7 +227,9 @@ function DataTable({
                           maxWidth: column.maxWidth,
                           verticalAlign: column.multiline ? "top" : "middle",
                           whiteSpace: column.multiline ? "normal" : undefined,
-                          wordBreak: column.multiline ? "break-word" : undefined,
+                          wordBreak: column.multiline
+                            ? "break-word"
+                            : undefined,
                         }}
                       >
                         {renderedValue !== undefined ? (
@@ -151,7 +255,10 @@ function DataTable({
                               sx={{ minWidth: 120 }}
                             >
                               {selectOptions.map((option) => (
-                                <MenuItem key={option.value ?? option} value={option.value ?? option}>
+                                <MenuItem
+                                  key={option.value ?? option}
+                                  value={option.value ?? option}
+                                >
                                   {option.label ?? option}
                                 </MenuItem>
                               ))}
@@ -162,11 +269,19 @@ function DataTable({
                             {column.allowOther && otherSelected && (
                               <TextField
                                 value={value || ""}
-                                placeholder={column.otherPlaceholder || "Enter value"}
+                                placeholder={
+                                  column.otherPlaceholder || "Enter value"
+                                }
                                 size="small"
                                 fullWidth
                                 sx={{ mt: 1 }}
-                                onChange={(event) => updateDraft(row, column.key, event.target.value)}
+                                onChange={(event) =>
+                                  updateDraft(
+                                    row,
+                                    column.key,
+                                    event.target.value,
+                                  )
+                                }
                               />
                             )}
                           </>
@@ -178,8 +293,12 @@ function DataTable({
                             multiline={Boolean(column.multiline)}
                             minRows={column.minRows}
                             maxRows={column.maxRows}
-                            slotProps={{ htmlInput: { inputMode: column.inputMode } }}
-                            onChange={(event) => updateDraft(row, column.key, event.target.value)}
+                            slotProps={{
+                              htmlInput: { inputMode: column.inputMode },
+                            }}
+                            onChange={(event) =>
+                              updateDraft(row, column.key, event.target.value)
+                            }
                           />
                         ) : column.key === "status" ? (
                           <Chip
@@ -244,17 +363,7 @@ function DataTable({
           </TableBody>
         </Table>
       </TableContainer>
-      {pagination && (
-        <TablePagination
-          component="div"
-          count={pagination.count}
-          page={pagination.page}
-          rowsPerPage={pagination.rowsPerPage}
-          rowsPerPageOptions={[10, 25, 50, 100]}
-          onPageChange={pagination.onPageChange}
-          onRowsPerPageChange={pagination.onRowsPerPageChange}
-        />
-      )}
+      {renderPagination()}
     </>
   );
 }

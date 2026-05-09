@@ -6,14 +6,15 @@ import SectionCard from "../components/SectionCard";
 import StatCard from "../components/StatCard";
 import useCrmResource from "../hooks/useCrmResource";
 import { crmApi } from "../services/crmApi";
+import { formatDateTime } from "../utils/formatDateTime";
 import { monthChange } from "../utils/statChange";
 
 const columns = [
   { key: "actorName", label: "User" },
   { key: "action", label: "Action" },
   { key: "title", label: "Title" },
-  { key: "description", label: "Details" },
-  { key: "createdAt", label: "Time" },
+  { key: "description", label: "Details", multiline: true, minWidth: 360 },
+  { key: "createdAt", label: "Time", render: (value) => formatDateTime(value) },
 ];
 
 function Activities() {

@@ -2,6 +2,7 @@ import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
 import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
 import HomeWorkRoundedIcon from "@mui/icons-material/HomeWorkRounded";
 import InsertChartRoundedIcon from "@mui/icons-material/InsertChartRounded";
+import NotificationsRoundedIcon from "@mui/icons-material/NotificationsRounded";
 import PersonSearchRoundedIcon from "@mui/icons-material/PersonSearchRounded";
 import SupervisorAccountRoundedIcon from "@mui/icons-material/SupervisorAccountRounded";
 import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
@@ -11,6 +12,7 @@ import Careers from "./pages/Careers";
 import Customer from "./pages/Customer";
 import DashBoard from "./pages/DashBoard";
 import Leads from "./pages/Leads";
+import Notifications from "./pages/Notifications";
 import PropertyEditor from "./pages/PropertyEditor";
 import Properties from "./pages/Properties";
 import Reports from "./pages/Reports";
@@ -58,6 +60,14 @@ export const appRoutes = [
     path: "/properties/:id",
     icon: <HomeWorkRoundedIcon fontSize="small" />,
     element: <PropertyEditor />,
+    roles: ["OWNER", "MANAGER", "SALES"],
+    hidden: true,
+  },
+  {
+    label: "Notifications",
+    path: "/notifications",
+    icon: <NotificationsRoundedIcon fontSize="small" />,
+    element: <Notifications />,
     roles: ["OWNER", "MANAGER", "SALES"],
     hidden: true,
   },

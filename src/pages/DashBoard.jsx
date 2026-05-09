@@ -29,9 +29,9 @@ const statIcons = [
 
 const leadColumns = [
   { key: "name", label: "Lead" },
-  { key: "owner", label: "Owner" },
-  { key: "value", label: "Value" },
   { key: "status", label: "Status" },
+  { key: "value", label: "Value" },
+  { key: "priorityReason", label: "Why priority" },
 ];
 
 const propertyColumns = [
@@ -143,7 +143,7 @@ function DashBoard() {
                   key={task.id || task.title}
                   variant={index === 0 ? "contained" : "outlined"}
                   fullWidth
-                  onClick={() => navigate("/leads")}
+                  onClick={() => navigate(`/leads?leadId=${task.leadId}`)}
                   sx={{
                     justifyContent: "flex-start",
                     borderRadius: 2,
@@ -161,9 +161,15 @@ function DashBoard() {
         <Grid size={{ xs: 12, lg: 6 }}>
           <SectionCard
             title="Priority leads"
-            subtitle="Best opportunities to move this week"
+            subtitle="Top leads by status, value, freshness, and follow-up risk"
           >
-            <DataTable columns={leadColumns} rows={summary.leads} />
+            {summary.leads.length === 0 ? (
+              <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                No priority leads right now.
+              </Typography>
+            ) : (
+              <DataTable columns={leadColumns} rows={summary.leads} />
+            )}
           </SectionCard>
         </Grid>
 
