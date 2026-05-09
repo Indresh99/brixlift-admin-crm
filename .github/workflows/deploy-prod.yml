@@ -20,7 +20,7 @@ env:
   HOSTED_ZONE_NAME: brixlift.com
   ADMIN_CRM_PROD_DOMAIN_NAMES: admin-crm.brixlift.com
   ADMIN_CRM_PROD_ACM_CERTIFICATE_ARN: ""
-  ADMIN_CRM_API_BASE_URL: http://localhost:8080
+  ADMIN_CRM_API_BASE_URL: https://api.brixlift.com
 
 jobs:
   deploy-prod:

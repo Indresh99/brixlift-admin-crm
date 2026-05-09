@@ -1,7 +1,7 @@
 import { emitToast } from "../toast/toastEvents";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+  import.meta.env.VITE_API_BASE_URL || "https://api.brixlift.com";
 const API_ROOT = `${API_BASE_URL}/api`;
 
 export const authStorage = {
@@ -91,59 +91,6 @@ function postForm(path, formData) {
   return request(path, { method: "POST", body: formData });
 }
 
-function postFormWithProgress(path, formData, onProgress) {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", `${API_ROOT}${path}`);
-
-    const token = authStorage.getToken();
-    if (token) {
-      xhr.setRequestHeader("Authorization", `Bearer ${token}`);
-    }
-
-    xhr.upload.onprogress = (event) => {
-      if (event.lengthComputable && onProgress) {
-        onProgress(Math.round((event.loaded / event.total) * 100));
-      }
-    };
-
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        try {
-          resolve(xhr.responseText ? JSON.parse(xhr.responseText) : null);
-        } catch {
-          resolve(null);
-        }
-        return;
-      }
-
-      const message = readXhrErrorMessage(xhr);
-      emitToast(message);
-      const error = new Error(message);
-      error.toastShown = true;
-      reject(error);
-    };
-
-    xhr.onerror = () => {
-      const error = new Error("Upload failed. Please try again.");
-      emitToast(error.message);
-      error.toastShown = true;
-      reject(error);
-    };
-
-    xhr.send(formData);
-  });
-}
-
-function readXhrErrorMessage(xhr) {
-  try {
-    const payload = JSON.parse(xhr.responseText);
-    return payload.message || payload.error || `Request failed with status ${xhr.status}`;
-  } catch {
-    return `Request failed with status ${xhr.status}`;
-  }
-}
-
 function toQueryString(filters) {
   const params = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => {
@@ -181,16 +128,16 @@ export const crmApi = {
   getDashboardPipeline: () => request("/dashboard/pipeline"),
   getDashboardTasks: () => request("/dashboard/tasks"),
   getActivities: () => request("/activities"),
-  getLeads: (params = {}) => request(`/leads${toQueryString(params)}`),
+  getLeads: () => request("/leads"),
   createLead: (payload) => post("/leads", payload),
   updateLead: (id, payload) => patch(`/leads/${id}`, payload),
   deleteLead: (id, payload) => deleteRequest(`/leads/${id}`, payload),
   convertLeadToCustomer: (id) => post(`/leads/${id}/convert-to-customer`),
   getLeadFilters: () => request("/filters/leads"),
-  uploadLeadsExcel: (file, onProgress) => {
+  uploadLeadsExcel: (file) => {
     const formData = new FormData();
     formData.append("file", file);
-    return postFormWithProgress("/leads/excel/upload", formData, onProgress);
+    return postForm("/leads/excel/upload", formData);
   },
   downloadLeadsExcel: (filters) =>
     requestBlob(`/leads/excel/download${toQueryString(filters)}`),
