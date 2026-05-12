@@ -149,6 +149,15 @@ export const crmApi = {
   createCareerPost: (payload) => post("/career-posts", payload),
   updateCareerPost: (id, payload) => patch(`/career-posts/${id}`, payload),
   deleteCareerPost: (id) => deleteRequest(`/career-posts/${id}`),
+  getBlogPosts: () => request("/blog-posts"),
+  createBlogPost: (payload) => post("/blog-posts", payload),
+  updateBlogPost: (id, payload) => patch(`/blog-posts/${id}`, payload),
+  deleteBlogPost: (id) => deleteRequest(`/blog-posts/${id}`),
+  uploadBlogImage: (file) => {
+    const formData = new FormData();
+    formData.append("image", file);
+    return postForm("/blog-posts/images", formData);
+  },
   getReports: () => request("/reports"),
   getMailImportSettings: () => request("/settings/mail-import"),
   updateMailImportSettings: (payload) => patch("/settings/mail-import", payload),
