@@ -35,7 +35,6 @@ const leadColumns = [
 ];
 
 const propertyColumns = [
-  { key: "propertyCode", label: "Code" },
   { key: "title", label: "Property" },
   {
     key: "price",

@@ -1,8 +1,5 @@
 import { emitToast } from "../toast/toastEvents";
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "https://api.brixlift.com";
-const API_ROOT = `${API_BASE_URL}/api`;
+import { API_ROOT } from "../config/api";
 
 export const authStorage = {
   getToken: () => localStorage.getItem("brixlift_admin_token"),
@@ -153,6 +150,8 @@ export const crmApi = {
   updateCareerPost: (id, payload) => patch(`/career-posts/${id}`, payload),
   deleteCareerPost: (id) => deleteRequest(`/career-posts/${id}`),
   getReports: () => request("/reports"),
+  getMailImportSettings: () => request("/settings/mail-import"),
+  updateMailImportSettings: (payload) => patch("/settings/mail-import", payload),
   getProperties: () => request("/properties"),
   getProperty: (id) => request(`/properties/${id}`),
   createProperty: (payload) => post("/properties", payload),
@@ -163,4 +162,12 @@ export const crmApi = {
     Array.from(files).forEach((file) => formData.append("images", file));
     return postForm("/properties/images", formData);
   },
+  uploadPropertyBrochure: (file) => {
+    const formData = new FormData();
+    formData.append("brochure", file);
+    return postForm("/properties/brochure", formData);
+  },
+  getMailInbox: (payload) => post("/mail/inbox", payload),
+  getMailMessage: (payload) => post("/mail/message", payload),
+  sendMail: (payload) => post("/mail/send", payload),
 };

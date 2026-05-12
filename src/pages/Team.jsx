@@ -1,11 +1,15 @@
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import EmailRoundedIcon from "@mui/icons-material/EmailRounded";
 import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
 import Button from "@mui/material/Button";
+import FormControlLabel from "@mui/material/FormControlLabel";
 import Grid from "@mui/material/Grid";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
+import Switch from "@mui/material/Switch";
 import TextField from "@mui/material/TextField";
-import { useState } from "react";
+import Typography from "@mui/material/Typography";
+import { useEffect, useState } from "react";
 import { useAuth } from "../auth/useAuth";
 import DataTable from "../components/DataTable";
 import PageHeader from "../components/PageHeader";
@@ -13,6 +17,7 @@ import SectionCard from "../components/SectionCard";
 import StatCard from "../components/StatCard";
 import useCrmResource from "../hooks/useCrmResource";
 import { crmApi } from "../services/crmApi";
+import { emitToast } from "../toast/toastEvents";
 import { monthChange } from "../utils/statChange";
 
 const columns = [
@@ -33,6 +38,16 @@ function Team() {
     role: "SALES",
     managerId: "",
   });
+  const [mailImport, setMailImport] = useState({
+    enabled: false,
+    email: "info@brixlift.com",
+    password: "",
+    actorEmail: "admin@brixlift.com",
+    intervalMs: 300000,
+    scanLimit: 100,
+    passwordConfigured: false,
+  });
+  const [savingMailImport, setSavingMailImport] = useState(false);
 
   const managers = users.filter((member) => member.role === "MANAGER");
   const salesUsers = users.filter((member) => member.role === "SALES");
@@ -59,6 +74,48 @@ function Team() {
       ...current,
       [event.target.name]: event.target.value,
     }));
+  };
+
+  useEffect(() => {
+    crmApi.getMailImportSettings().then((settings) => {
+      setMailImport((current) => ({
+        ...current,
+        ...settings,
+        password: "",
+      }));
+    });
+  }, []);
+
+  const updateMailImportField = (event) => {
+    const { name, value, checked, type } = event.target;
+    setMailImport((current) => ({
+      ...current,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  const saveMailImportSettings = async (event) => {
+    event.preventDefault();
+    setSavingMailImport(true);
+    try {
+      const payload = {
+        enabled: Boolean(mailImport.enabled),
+        email: mailImport.email,
+        actorEmail: mailImport.actorEmail,
+        intervalMs: Number(mailImport.intervalMs),
+        scanLimit: Number(mailImport.scanLimit),
+      };
+      if (mailImport.password) {
+        payload.password = mailImport.password;
+      }
+      const saved = await crmApi.updateMailImportSettings(payload);
+      setMailImport((current) => ({ ...current, ...saved, password: "" }));
+      emitToast("Mail import scheduler settings saved.", "success");
+    } catch (error) {
+      if (!error.toastShown) emitToast(error.message || "Unable to save mail import settings.");
+    } finally {
+      setSavingMailImport(false);
+    }
   };
 
   const createUser = async (event) => {
@@ -170,6 +227,100 @@ function Team() {
             subtitle="Visible users are scoped by your role"
           >
             <DataTable columns={columns} rows={users} />
+          </SectionCard>
+        </Grid>
+
+        <Grid size={{ xs: 12 }}>
+          <SectionCard
+            title="Mail lead importer"
+            subtitle="Control the scheduled import of 99acres leads from the company mailbox."
+          >
+            <Stack component="form" spacing={2} onSubmit={saveMailImportSettings}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    name="enabled"
+                    checked={Boolean(mailImport.enabled)}
+                    onChange={updateMailImportField}
+                  />
+                }
+                label={<Typography variant="body2">Enable scheduled mail import</Typography>}
+              />
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <TextField
+                    label="Mailbox email"
+                    name="email"
+                    type="email"
+                    value={mailImport.email}
+                    onChange={updateMailImportField}
+                    fullWidth
+                    size="small"
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <TextField
+                    label={mailImport.passwordConfigured ? "Mailbox password (saved)" : "Mailbox password"}
+                    name="password"
+                    type="password"
+                    value={mailImport.password}
+                    onChange={updateMailImportField}
+                    fullWidth
+                    size="small"
+                    placeholder={mailImport.passwordConfigured ? "Leave blank to keep existing" : ""}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <TextField
+                    label="CRM actor email"
+                    name="actorEmail"
+                    type="email"
+                    value={mailImport.actorEmail}
+                    onChange={updateMailImportField}
+                    fullWidth
+                    size="small"
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <TextField
+                    label="Delay / interval (minutes)"
+                    name="intervalMs"
+                    type="number"
+                    value={Math.round(Number(mailImport.intervalMs || 300000) / 60000)}
+                    onChange={(event) =>
+                      setMailImport((current) => ({
+                        ...current,
+                        intervalMs: Number(event.target.value || 5) * 60000,
+                      }))
+                    }
+                    fullWidth
+                    size="small"
+                    inputProps={{ min: 1 }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <TextField
+                    label="Scan latest mails"
+                    name="scanLimit"
+                    type="number"
+                    value={mailImport.scanLimit}
+                    onChange={updateMailImportField}
+                    fullWidth
+                    size="small"
+                    inputProps={{ min: 1, max: 500 }}
+                  />
+                </Grid>
+              </Grid>
+              <Button
+                type="submit"
+                variant="contained"
+                startIcon={<EmailRoundedIcon />}
+                disabled={savingMailImport}
+                sx={{ borderRadius: 2, textTransform: "none", alignSelf: "flex-start" }}
+              >
+                {savingMailImport ? "Saving..." : "Save scheduler settings"}
+              </Button>
+            </Stack>
           </SectionCard>
         </Grid>
       </Grid>

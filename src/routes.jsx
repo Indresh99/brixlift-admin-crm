@@ -2,6 +2,7 @@ import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
 import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
 import HomeWorkRoundedIcon from "@mui/icons-material/HomeWorkRounded";
 import InsertChartRoundedIcon from "@mui/icons-material/InsertChartRounded";
+import MailRoundedIcon from "@mui/icons-material/MailRounded";
 import NotificationsRoundedIcon from "@mui/icons-material/NotificationsRounded";
 import PersonSearchRoundedIcon from "@mui/icons-material/PersonSearchRounded";
 import SupervisorAccountRoundedIcon from "@mui/icons-material/SupervisorAccountRounded";
@@ -12,6 +13,7 @@ import Careers from "./pages/Careers";
 import Customer from "./pages/Customer";
 import DashBoard from "./pages/DashBoard";
 import Leads from "./pages/Leads";
+import Mail from "./pages/Mail";
 import Notifications from "./pages/Notifications";
 import PropertyEditor from "./pages/PropertyEditor";
 import Properties from "./pages/Properties";
@@ -76,6 +78,13 @@ export const appRoutes = [
     path: "/activity",
     icon: <HistoryRoundedIcon fontSize="small" />,
     element: <Activities />,
+    roles: ["OWNER", "MANAGER", "SALES"],
+  },
+  {
+    label: "Mail",
+    path: "/mail",
+    icon: <MailRoundedIcon fontSize="small" />,
+    element: <Mail />,
     roles: ["OWNER", "MANAGER", "SALES"],
   },
   {

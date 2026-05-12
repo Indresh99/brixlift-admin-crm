@@ -21,6 +21,7 @@ env:
   ADMIN_CRM_PROD_DOMAIN_NAMES: admin-crm.brixlift.com
   ADMIN_CRM_PROD_ACM_CERTIFICATE_ARN: ""
   ADMIN_CRM_API_BASE_URL: https://api.brixlift.com
+  ADMIN_CRM_GA_MEASUREMENT_ID: G-0HNM4Z47TK
 
 jobs:
   deploy-prod:
@@ -78,6 +79,7 @@ jobs:
       - name: Build production bundle
         env:
           VITE_API_BASE_URL: ${{ env.ADMIN_CRM_API_BASE_URL }}
+          VITE_GA_MEASUREMENT_ID: ${{ env.ADMIN_CRM_GA_MEASUREMENT_ID }}
         run: npm run build
 
       - name: Sync static files to S3
