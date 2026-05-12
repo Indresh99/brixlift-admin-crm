@@ -32,7 +32,6 @@ function Properties() {
   const verifiedCount = propertyRows.filter((property) => property.verified).length;
 
   const columns = [
-    { key: "propertyCode", label: "Code" },
     { key: "title", label: "Property" },
     { key: "projectName", label: "Project" },
     {
