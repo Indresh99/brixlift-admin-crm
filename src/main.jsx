@@ -4,9 +4,6 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App.jsx";
 import { AuthProvider } from "./auth/AuthContext.jsx";
 import ToastProvider from "./toast/ToastProvider.jsx";
-import { initAnalytics } from "./utils/analytics.js";
-
-initAnalytics();
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
