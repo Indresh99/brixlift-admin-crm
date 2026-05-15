@@ -3,6 +3,7 @@ import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import HomeWorkRoundedIcon from "@mui/icons-material/HomeWorkRounded";
 import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
@@ -29,7 +30,7 @@ function Properties() {
     (property) => property.status === "AVAILABLE",
   ).length;
   const featuredCount = propertyRows.filter((property) => property.featured).length;
-  const verifiedCount = propertyRows.filter((property) => property.verified).length;
+  const premiumCount = propertyRows.filter((property) => property.premium).length;
 
   const columns = [
     { key: "title", label: "Property" },
@@ -41,6 +42,19 @@ function Properties() {
     },
     { key: "city", label: "City" },
     { key: "locality", label: "Locality" },
+    {
+      key: "premium",
+      label: "Premium",
+      render: (value) => (
+        <Chip
+          label={value ? "Premium" : "Standard"}
+          color={value ? "warning" : "default"}
+          size="small"
+          variant={value ? "filled" : "outlined"}
+          sx={{ fontWeight: 800 }}
+        />
+      ),
+    },
     { key: "status", label: "Status" },
   ];
 
@@ -93,9 +107,9 @@ function Properties() {
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
           <StatCard
-            title="Featured / verified"
-            value={`${featuredCount}/${verifiedCount}`}
-            change={monthChange(propertyRows, (property) => property.featured || property.verified)}
+            title="Premium / featured"
+            value={`${premiumCount}/${featuredCount}`}
+            change={monthChange(propertyRows, (property) => property.premium || property.featured)}
             icon={<HomeWorkRoundedIcon />}
             color="warning.main"
           />

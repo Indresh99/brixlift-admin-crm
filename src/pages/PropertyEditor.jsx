@@ -133,6 +133,7 @@ const emptyProperty = {
   reraNumber: "",
   propertyType: "Apartment",
   propertySubType: "Residential",
+  tagsText: "",
   purpose: "SALE",
   status: "AVAILABLE",
   price: "",
@@ -150,6 +151,18 @@ const emptyProperty = {
   totalFloors: "",
   city: "",
   locality: "",
+  localityProfileSlug: "",
+  localityProfileCommute: "",
+  localityProfileBuyerFit: "",
+  localityProfileRentalYield: "",
+  localityProfileIntent: "",
+  localityProfileDriversText: "",
+  localityProfileFiltersText: "",
+  localityProfileHighlightsText: "",
+  localityProfileLandingEyebrow: "",
+  localityProfileLandingTitle: "",
+  localityProfileLandingSubtitle: "",
+  localityProfilePrimaryHref: "",
   landmark: "",
   address: "",
   pincode: "",
@@ -167,6 +180,7 @@ const emptyProperty = {
   contactNumber: "",
   verified: false,
   featured: false,
+  premium: false,
   viewsCount: 0,
   inquiriesCount: 0,
   mainImageUrl: "",
@@ -527,6 +541,15 @@ function PropertyEditor() {
               value={form.status}
               onChange={updateField}
             />
+            <Field
+              name="tagsText"
+              label="Search tags"
+              value={form.tagsText}
+              onChange={updateField}
+              multiline
+              md={12}
+              placeholder="One tag per line or comma-separated: IT park, Near Infosys, Under 80L, Rental income"
+            />
           </Grid>
         </SectionCard>
 
@@ -762,6 +785,105 @@ function PropertyEditor() {
               onChange={updateField}
               multiline
               md={12}
+            />
+          </Grid>
+        </SectionCard>
+
+        <SectionCard
+          title="Locality profile"
+          subtitle="These values are saved with the locality and returned inside property responses"
+        >
+          <Grid container spacing={2}>
+            <Field
+              name="localityProfileSlug"
+              label="Locality slug"
+              value={form.localityProfileSlug}
+              onChange={updateField}
+              placeholder="hinjewadi"
+            />
+            <Field
+              name="localityProfileBuyerFit"
+              label="Buyer fit"
+              value={form.localityProfileBuyerFit}
+              onChange={updateField}
+              placeholder="Best for IT professionals"
+            />
+            <Field
+              name="localityProfileRentalYield"
+              label="Rental yield"
+              value={form.localityProfileRentalYield}
+              onChange={updateField}
+              placeholder="3.2-4.2%"
+            />
+            <Field
+              name="localityProfileIntent"
+              label="Intent"
+              value={form.localityProfileIntent}
+              onChange={updateField}
+              placeholder="Investment + end-use"
+            />
+            <Field
+              name="localityProfileCommute"
+              label="Commute"
+              value={form.localityProfileCommute}
+              onChange={updateField}
+              md={8}
+              placeholder="10-25 min to major IT campuses"
+            />
+            <Field
+              name="localityProfileDriversText"
+              label="Drivers"
+              value={form.localityProfileDriversText}
+              onChange={updateField}
+              multiline
+              md={12}
+              placeholder="One per line: IT Park, Metro access, schools"
+            />
+            <Field
+              name="localityProfileFiltersText"
+              label="Public filter chips"
+              value={form.localityProfileFiltersText}
+              onChange={updateField}
+              multiline
+              md={12}
+            />
+            <Field
+              name="localityProfileHighlightsText"
+              label="Landing highlights"
+              value={form.localityProfileHighlightsText}
+              onChange={updateField}
+              multiline
+              md={12}
+              placeholder="Title | Description, one per line"
+            />
+            <Field
+              name="localityProfileLandingEyebrow"
+              label="Landing eyebrow"
+              value={form.localityProfileLandingEyebrow}
+              onChange={updateField}
+            />
+            <Field
+              name="localityProfileLandingTitle"
+              label="Landing title"
+              value={form.localityProfileLandingTitle}
+              onChange={updateField}
+              md={8}
+            />
+            <Field
+              name="localityProfileLandingSubtitle"
+              label="Landing subtitle"
+              value={form.localityProfileLandingSubtitle}
+              onChange={updateField}
+              multiline
+              md={12}
+            />
+            <Field
+              name="localityProfilePrimaryHref"
+              label="Landing CTA href"
+              value={form.localityProfilePrimaryHref}
+              onChange={updateField}
+              md={12}
+              placeholder="/properties?locality=Hinjewadi"
             />
           </Grid>
         </SectionCard>
@@ -1128,6 +1250,12 @@ function PropertyEditor() {
               checked={form.featured}
               onChange={updateSwitch}
             />
+            <SwitchField
+              name="premium"
+              label="Premium builder"
+              checked={form.premium}
+              onChange={updateSwitch}
+            />
           </Grid>
         </SectionCard>
       </Stack>
@@ -1290,6 +1418,8 @@ function toForm(property) {
       ? property.configurations.map(toConfigurationForm)
       : [toConfigurationForm(property)];
 
+  const localityProfile = property.localityProfile || {};
+
   return {
     ...emptyProperty,
     ...property,
@@ -1298,6 +1428,7 @@ function toForm(property) {
     price: property.price ?? "",
     maintenanceCharges: property.maintenanceCharges ?? "",
     imageUrlsText: (property.imageUrls || []).join("\n"),
+    tagsText: (property.tags || []).join("\n"),
     brochureUrl: property.brochureUrl || "",
     amenities:
       property.amenities && property.amenities.length > 0
@@ -1305,6 +1436,18 @@ function toForm(property) {
         : defaultAmenities,
     contactName: property.contactName || property.contact_name || "",
     contactNumber: property.contactNumber || property.contact_number || "",
+    localityProfileSlug: localityProfile.slug || "",
+    localityProfileCommute: localityProfile.commute || "",
+    localityProfileBuyerFit: localityProfile.buyerFit || "",
+    localityProfileRentalYield: localityProfile.rentalYield || "",
+    localityProfileIntent: localityProfile.intent || "",
+    localityProfileDriversText: (localityProfile.drivers || []).join("\n"),
+    localityProfileFiltersText: (localityProfile.filters || []).join("\n"),
+    localityProfileHighlightsText: (localityProfile.highlights || []).join("\n"),
+    localityProfileLandingEyebrow: localityProfile.landingEyebrow || "",
+    localityProfileLandingTitle: localityProfile.landingTitle || "",
+    localityProfileLandingSubtitle: localityProfile.landingSubtitle || "",
+    localityProfilePrimaryHref: localityProfile.primaryHref || "",
   };
 }
 
@@ -1326,6 +1469,7 @@ function toPayload(form) {
     imageUrls: splitLines(form.imageUrlsText),
     purpose: cleanString(form.purpose),
     propertySubType: cleanString(form.propertySubType),
+    tags: splitLines(form.tagsText),
     amenities: form.amenities || [],
     configurations,
     price: primaryConfiguration.price ?? null,
@@ -1343,6 +1487,23 @@ function toPayload(form) {
     totalFloors: primaryConfiguration.totalFloors ?? null,
     city: cleanString(form.city),
     locality: cleanString(form.locality),
+    localityProfile: {
+      slug: cleanString(form.localityProfileSlug),
+      locality: cleanString(form.locality),
+      city: cleanString(form.city),
+      commute: cleanString(form.localityProfileCommute),
+      buyerFit: cleanString(form.localityProfileBuyerFit),
+      rentalYield: cleanString(form.localityProfileRentalYield),
+      intent: cleanString(form.localityProfileIntent),
+      active: true,
+      drivers: splitLines(form.localityProfileDriversText),
+      filters: splitLines(form.localityProfileFiltersText),
+      highlights: splitLines(form.localityProfileHighlightsText),
+      landingEyebrow: cleanString(form.localityProfileLandingEyebrow),
+      landingTitle: cleanString(form.localityProfileLandingTitle),
+      landingSubtitle: cleanString(form.localityProfileLandingSubtitle),
+      primaryHref: cleanString(form.localityProfilePrimaryHref),
+    },
     landmark: cleanString(form.landmark),
     address: cleanString(form.address),
     pincode: cleanString(form.pincode),
@@ -1361,6 +1522,7 @@ function toPayload(form) {
     contactNumber: cleanString(form.contactNumber),
     verified: Boolean(form.verified),
     featured: Boolean(form.featured),
+    premium: Boolean(form.premium),
     viewsCount: toInteger(form.viewsCount) || 0,
     inquiriesCount: toInteger(form.inquiriesCount) || 0,
   };
