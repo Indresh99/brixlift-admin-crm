@@ -570,7 +570,7 @@ function Blogs() {
     setUploadingFeaturedImage(true);
     emitToast("Uploading featured image...", "info");
     try {
-      const response = await crmApi.uploadBlogImage(files[0]);
+      const response = await crmApi.uploadBlogImage(files[0], form.slug || form.title);
       setForm((current) => ({ ...current, featuredImageUrl: response.url || current.featuredImageUrl }));
       emitToast("Featured image uploaded successfully.", "success");
     } catch (error) {
@@ -587,7 +587,7 @@ function Blogs() {
     setUploadingInlineImage(true);
     emitToast("Uploading article image...", "info");
     try {
-      const response = await crmApi.uploadBlogImage(files[0]);
+      const response = await crmApi.uploadBlogImage(files[0], form.slug || form.title);
       const imageUrl = response.url;
       const quill = quillInstanceRef.current;
       if (quill && imageUrl) {

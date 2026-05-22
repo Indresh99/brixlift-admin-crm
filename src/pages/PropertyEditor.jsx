@@ -353,7 +353,7 @@ function PropertyEditor() {
     setUploadingMainImage(true);
     emitToast("Uploading main image...", "info");
     try {
-      const response = await crmApi.uploadPropertyImages([files[0]]);
+      const response = await crmApi.uploadPropertyImages([files[0]], form.projectName || form.title);
       const urls = response.urls || [];
       setForm((current) => ({
         ...current,
@@ -380,7 +380,7 @@ function PropertyEditor() {
       "info",
     );
     try {
-      const response = await crmApi.uploadPropertyImages(files);
+      const response = await crmApi.uploadPropertyImages(files, form.projectName || form.title);
       const urls = response.urls || [];
       setForm((current) => {
         const existingUrls = splitLines(current.imageUrlsText);
@@ -411,7 +411,7 @@ function PropertyEditor() {
     setUploadingBrochure(true);
     emitToast("Uploading brochure...", "info");
     try {
-      const response = await crmApi.uploadPropertyBrochure(files[0]);
+      const response = await crmApi.uploadPropertyBrochure(files[0], form.projectName || form.title);
       setForm((current) => ({
         ...current,
         brochureUrl: response.url || current.brochureUrl,

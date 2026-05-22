@@ -153,9 +153,10 @@ export const crmApi = {
   createBlogPost: (payload) => post("/blog-posts", payload),
   updateBlogPost: (id, payload) => patch(`/blog-posts/${id}`, payload),
   deleteBlogPost: (id) => deleteRequest(`/blog-posts/${id}`),
-  uploadBlogImage: (file) => {
+  uploadBlogImage: (file, blogName) => {
     const formData = new FormData();
     formData.append("image", file);
+    if (blogName) formData.append("blogName", blogName);
     return postForm("/blog-posts/images", formData);
   },
   getReports: () => request("/reports"),
@@ -166,14 +167,16 @@ export const crmApi = {
   createProperty: (payload) => post("/properties", payload),
   updateProperty: (id, payload) => put(`/properties/${id}`, payload),
   deleteProperty: (id) => deleteRequest(`/properties/${id}`),
-  uploadPropertyImages: (files) => {
+  uploadPropertyImages: (files, projectName) => {
     const formData = new FormData();
     Array.from(files).forEach((file) => formData.append("images", file));
+    if (projectName) formData.append("projectName", projectName);
     return postForm("/properties/images", formData);
   },
-  uploadPropertyBrochure: (file) => {
+  uploadPropertyBrochure: (file, projectName) => {
     const formData = new FormData();
     formData.append("brochure", file);
+    if (projectName) formData.append("projectName", projectName);
     return postForm("/properties/brochure", formData);
   },
   getMailInbox: (payload) => post("/mail/inbox", payload),
