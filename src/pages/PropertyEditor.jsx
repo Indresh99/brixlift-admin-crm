@@ -185,6 +185,7 @@ const emptyProperty = {
   inquiriesCount: 0,
   mainImageUrl: "",
   brochureUrl: "",
+  promoVideoUrl: "",
   imageUrlsText: "",
   amenities: defaultAmenities,
   configurations: [
@@ -222,11 +223,13 @@ function PropertyEditor() {
   const mainImageInputRef = useRef(null);
   const galleryImageInputRef = useRef(null);
   const brochureInputRef = useRef(null);
+  const promoVideoInputRef = useRef(null);
   const [form, setForm] = useState(emptyProperty);
   const [savingProperty, setSavingProperty] = useState(false);
   const [uploadingMainImage, setUploadingMainImage] = useState(false);
   const [uploadingGalleryImages, setUploadingGalleryImages] = useState(false);
   const [uploadingBrochure, setUploadingBrochure] = useState(false);
+  const [uploadingPromoVideo, setUploadingPromoVideo] = useState(false);
   const imageUrls = useMemo(
     () => splitLines(form.imageUrlsText),
     [form.imageUrlsText],
@@ -427,6 +430,28 @@ function PropertyEditor() {
     }
   };
 
+  const uploadPromoVideo = async (event) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+    setUploadingPromoVideo(true);
+    emitToast("Uploading promo video...", "info");
+    try {
+      const response = await crmApi.uploadPropertyPromoVideo(files[0], form.projectName || form.title);
+      setForm((current) => ({
+        ...current,
+        promoVideoUrl: response.url || current.promoVideoUrl,
+      }));
+      emitToast("Promo video uploaded successfully.", "success");
+    } catch (error) {
+      if (!error.toastShown) {
+        emitToast(error.message || "Unable to upload promo video.");
+      }
+    } finally {
+      setUploadingPromoVideo(false);
+      event.target.value = "";
+    }
+  };
+
   const removeMainImage = () => {
     setForm((current) => ({ ...current, mainImageUrl: "" }));
   };
@@ -442,6 +467,10 @@ function PropertyEditor() {
 
   const removeBrochure = () => {
     setForm((current) => ({ ...current, brochureUrl: "" }));
+  };
+
+  const removePromoVideo = () => {
+    setForm((current) => ({ ...current, promoVideoUrl: "" }));
   };
 
   return (
@@ -1202,6 +1231,86 @@ function PropertyEditor() {
         </SectionCard>
 
         <SectionCard
+          title="Promo video"
+          subtitle="Upload the property video to S3 for the frontend detail page"
+        >
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 12 }}>
+              <Stack
+                direction={{ xs: "column", md: "row" }}
+                spacing={1}
+                alignItems={{ xs: "stretch", md: "center" }}
+              >
+                <input
+                  ref={promoVideoInputRef}
+                  hidden
+                  type="file"
+                  accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"
+                  onChange={uploadPromoVideo}
+                />
+                <Field
+                  name="promoVideoUrl"
+                  label="Promo video URL"
+                  value={form.promoVideoUrl}
+                  onChange={updateField}
+                  md={8}
+                />
+                <Button
+                  variant="outlined"
+                  startIcon={<UploadRoundedIcon />}
+                  sx={{
+                    borderRadius: 2,
+                    textTransform: "none",
+                    alignSelf: { md: "flex-start" },
+                  }}
+                  disabled={uploadingPromoVideo}
+                  onClick={() => promoVideoInputRef.current?.click()}
+                >
+                  {uploadingPromoVideo ? "Uploading..." : "Upload video"}
+                </Button>
+                {form.promoVideoUrl && (
+                  <Button
+                    variant="text"
+                    color="error"
+                    startIcon={<CloseRoundedIcon />}
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: "none",
+                      alignSelf: { md: "flex-start" },
+                    }}
+                    onClick={removePromoVideo}
+                  >
+                    Remove
+                  </Button>
+                )}
+              </Stack>
+              {uploadingPromoVideo && (
+                <LinearProgress sx={{ mt: 1, borderRadius: 1 }} />
+              )}
+            </Grid>
+            {form.promoVideoUrl && (
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Box
+                  component="video"
+                  src={form.promoVideoUrl}
+                  controls
+                  muted
+                  playsInline
+                  sx={{
+                    width: "100%",
+                    aspectRatio: "16 / 9",
+                    objectFit: "cover",
+                    borderRadius: 2,
+                    display: "block",
+                    bgcolor: "grey.900",
+                  }}
+                />
+              </Grid>
+            )}
+          </Grid>
+        </SectionCard>
+
+        <SectionCard
           title="Contact and publishing"
           subtitle="Seller contact and listing controls"
         >
@@ -1430,6 +1539,7 @@ function toForm(property) {
     imageUrlsText: (property.imageUrls || []).join("\n"),
     tagsText: (property.tags || []).join("\n"),
     brochureUrl: property.brochureUrl || "",
+    promoVideoUrl: property.promoVideoUrl || "",
     amenities:
       property.amenities && property.amenities.length > 0
         ? property.amenities.map(normalizeAmenity).filter(Boolean)
@@ -1466,6 +1576,7 @@ function toPayload(form) {
     propertyType: cleanString(form.propertyType),
     mainImageUrl: cleanString(form.mainImageUrl),
     brochureUrl: cleanString(form.brochureUrl),
+    promoVideoUrl: cleanString(form.promoVideoUrl),
     imageUrls: splitLines(form.imageUrlsText),
     purpose: cleanString(form.purpose),
     propertySubType: cleanString(form.propertySubType),

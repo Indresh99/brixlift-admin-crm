@@ -179,6 +179,12 @@ export const crmApi = {
     if (projectName) formData.append("projectName", projectName);
     return postForm("/properties/brochure", formData);
   },
+  uploadPropertyPromoVideo: (file, projectName) => {
+    const formData = new FormData();
+    formData.append("video", file);
+    if (projectName) formData.append("projectName", projectName);
+    return postForm("/properties/promo-video", formData);
+  },
   getMailInbox: (payload) => post("/mail/inbox", payload),
   getMailMessage: (payload) => post("/mail/message", payload),
   sendMail: (payload) => post("/mail/send", payload),
